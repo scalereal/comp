@@ -28,6 +28,8 @@ services:
       context: .
       dockerfile: Dockerfile
       target: app
+      secrets:
+        - app_build_env
       args:
         NEXT_PUBLIC_BETTER_AUTH_URL: ${BETTER_AUTH_URL}
     ports:
@@ -47,8 +49,10 @@ services:
       context: .
       dockerfile: Dockerfile
       target: portal
+      secrets:
+        - portal_build_env
       args:
-        NEXT_PUBLIC_BETTER_AUTH_URL: ${BETTER_AUTH_URL_PORTAL}
+        NEXT_PUBLIC_BETTER_AUTH_URL: ${BETTER_AUTH_URL}
     ports:
       - '3002:3000'
     env_file:
@@ -60,3 +64,12 @@ services:
       timeout: 10s
       retries: 3
     logging: *default-logging
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+# Available only to the corresponding Docker build RUN secret mount.
+secrets:
+  app_build_env:
+    file: ./apps/app/.env
+  portal_build_env:
+    file: ./apps/portal/.env

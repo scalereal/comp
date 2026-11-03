@@ -1,14 +1,21 @@
+# syntax=docker/dockerfile:1
+
 # =============================================================================
 # STAGE 1: Dependencies - Install and cache workspace dependencies
 # =============================================================================
-FROM oven/bun:1.2.8 AS deps
+FROM oven/bun:1.3.4 AS deps
 
 WORKDIR /app
 
 # Copy workspace configuration
 COPY package.json bun.lock ./
 
-# Copy package.json files for all packages (exclude local db; use published @trycompai/db)
+# Copy workspace manifests required by the app and portal before installing dependencies.
+# workspace:* dependencies must be present locally; they cannot use registry fallbacks.
+COPY packages/auth/package.json ./packages/auth/
+COPY packages/billing/package.json ./packages/billing/
+COPY packages/company/package.json ./packages/company/
+COPY packages/db/package.json ./packages/db/
 COPY packages/kv/package.json ./packages/kv/
 COPY packages/ui/package.json ./packages/ui/
 COPY packages/email/package.json ./packages/email/
@@ -22,13 +29,14 @@ COPY packages/analytics/package.json ./packages/analytics/
 COPY apps/app/package.json ./apps/app/
 COPY apps/portal/package.json ./apps/portal/
 
-# Install all dependencies
-RUN PRISMA_SKIP_POSTINSTALL_GENERATE=true bun install --ignore-scripts
+# Hoist dependencies so emitted workspace declarations do not reference Bun's
+# isolated .bun store paths (TS2742 when building the shared auth package).
+RUN PRISMA_SKIP_POSTINSTALL_GENERATE=true bun install --ignore-scripts --linker=hoisted
 
 # =============================================================================
 # STAGE 2: Ultra-Minimal Migrator - Only Prisma
 # =============================================================================
-FROM oven/bun:1.2.8 AS migrator
+FROM oven/bun:1.3.4 AS migrator
 
 WORKDIR /app
 
@@ -50,26 +58,37 @@ RUN echo "Running migrations against @trycompai/db combined schema"
 CMD ["bunx", "prisma", "migrate", "deploy", "--schema=node_modules/@trycompai/db/dist/schema.prisma"]
 
 # =============================================================================
-# STAGE 3: App Builder
+# STAGE 3: Shared Packages - Build before either Next.js application
 # =============================================================================
-FROM deps AS app-builder
+FROM deps AS packages-builder
 
 WORKDIR /app
 
-# Copy all source code needed for build
+# Dependencies (including workspace-local node_modules) are inherited from deps.
 COPY packages ./packages
+
+# Build the web workspace packages that emit dist/. Database generation must
+# precede packages that consume its client/types. Source-only packages (utils,
+# tsconfig, integrations) have no build script. Electron and CLI builds are not
+# needed by the web applications and are intentionally excluded.
+RUN bun run --filter '@trycompai/db' build \
+    && bun run --filter '@trycompai/auth' build \
+    && bun run --filter '@trycompai/billing' build \
+    && bun run --filter '@trycompai/analytics' build \
+    && bun run --filter '@trycompai/kv' build \
+    && bun run --filter '@trycompai/integration-platform' build \
+    && bun run --filter '@trycompai/email' build \
+    && bun run --filter '@trycompai/company' build \
+    && bun run --filter '@trycompai/ui' build
+
+# =============================================================================
+# STAGE 4: App Builder
+# =============================================================================
+FROM packages-builder AS app-builder
+
+WORKDIR /app
+
 COPY apps/app ./apps/app
-
-# Bring in node_modules for build and prisma prebuild
-COPY --from=deps /app/node_modules ./node_modules
-
-# Pre-combine schemas and generate the Prisma client into
-# node_modules/@prisma/client. The deps stage ran `bun install` with
-# `--ignore-scripts` so packages/db's postinstall was skipped; we run
-# it explicitly here so `next build` can resolve the generated runtime
-# + types when it imports @prisma/client.
-RUN cd packages/db && node scripts/combine-schemas.js \
-                   && node scripts/generate-prisma-client-js.js
 
 # Ensure Next build has required public env at build-time
 ARG NEXT_PUBLIC_BETTER_AUTH_URL
@@ -88,11 +107,12 @@ ENV NEXT_PUBLIC_BETTER_AUTH_URL=$NEXT_PUBLIC_BETTER_AUTH_URL \
     NEXT_OUTPUT_STANDALONE=true \
     NODE_OPTIONS=--max_old_space_size=6144
 
-# Build the app
-RUN cd apps/app && SKIP_ENV_VALIDATION=true bun run build:docker
+# Mount build-time configuration without copying the environment file into a layer.
+RUN --mount=type=secret,id=app_build_env,target=/app/apps/app/.env,required=true \
+    cd apps/app && SKIP_ENV_VALIDATION=true bun run build:docker
 
 # =============================================================================
-# STAGE 4: App Production
+# STAGE 5: App Production
 # =============================================================================
 FROM node:22-alpine AS app
 
@@ -107,35 +127,32 @@ EXPOSE 3000
 CMD ["node", "apps/app/server.js"]
 
 # =============================================================================
-# STAGE 5: Portal Builder
+# STAGE 6: Portal Builder
 # =============================================================================
-FROM deps AS portal-builder
+FROM packages-builder AS portal-builder
 
 WORKDIR /app
 
-# Copy all source code needed for build
-COPY packages ./packages
 COPY apps/portal ./apps/portal
 
-# Bring in node_modules for build and prisma prebuild
-COPY --from=deps /app/node_modules ./node_modules
-
-# Pre-combine schemas for portal build
-RUN cd packages/db && node scripts/combine-schemas.js
+# The database package build already produced the combined schema.
 RUN cp packages/db/dist/schema.prisma apps/portal/prisma/schema.prisma
 
 # Ensure Next build has required public env at build-time
 ARG NEXT_PUBLIC_BETTER_AUTH_URL
+ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_BETTER_AUTH_URL=$NEXT_PUBLIC_BETTER_AUTH_URL \
+    NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
     NEXT_TELEMETRY_DISABLED=1 NODE_ENV=production \
     NEXT_OUTPUT_STANDALONE=true \
     NODE_OPTIONS=--max_old_space_size=6144
 
-# Build the portal
-RUN cd apps/portal && SKIP_ENV_VALIDATION=true bun run build:docker
+# Mount build-time configuration without copying the environment file into a layer.
+RUN --mount=type=secret,id=portal_build_env,target=/app/apps/portal/.env,required=true \
+    cd apps/portal && SKIP_ENV_VALIDATION=true bun run build:docker
 
 # =============================================================================
-# STAGE 6: Portal Production
+# STAGE 7: Portal Production
 # =============================================================================
 FROM node:22-alpine AS portal
 
