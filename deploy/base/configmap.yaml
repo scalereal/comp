@@ -19,6 +19,7 @@ data:
   NEXT_PUBLIC_PORTAL_URL: "https://${PORTAL_HOST}"
   NEXT_PUBLIC_API_URL: "https://${API_HOST}"
   NEXT_PUBLIC_SELF_HOSTED: "true"
+  PRISMA_ALLOW_INSECURE_TLS: "1"
   # Internal Cluster DNS Routing
   BACKEND_API_URL: "http://comp-api:3333"
   UPSTASH_REDIS_REST_URL: "http://comp-redis-http:80"

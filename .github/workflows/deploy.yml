@@ -166,6 +166,18 @@ jobs:
             --docker-password="${{ secrets.GITHUB_TOKEN }}" \
             --dry-run=client -o yaml | kubectl apply -f -
 
+          # Generate in-cluster TLS certificate for PostgreSQL SSL if not exists
+          if ! kubectl get secret comp-postgres-tls -n comp >/dev/null 2>&1; then
+            openssl req -x509 -newkey rsa:2048 -nodes \
+              -keyout /tmp/pg.key -out /tmp/pg.crt -days 3650 \
+              -subj "/CN=comp-postgres"
+            kubectl create secret tls comp-postgres-tls \
+              --namespace=comp \
+              --cert=/tmp/pg.crt \
+              --key=/tmp/pg.key
+            rm -f /tmp/pg.key /tmp/pg.crt
+          fi
+
       - name: Populate Application Secrets
         env:
           POSTGRES_PWD: ${{ secrets.POSTGRES_PASSWORD }}
@@ -188,7 +200,7 @@ jobs:
             --from-literal=POSTGRES_USER="postgres" \
             --from-literal=POSTGRES_PASSWORD="${POSTGRES_PWD}" \
             --from-literal=POSTGRES_DB="comp" \
-            --from-literal=DATABASE_URL="postgresql://postgres:${POSTGRES_PWD}@comp-postgres:5432/comp?schema=public&sslmode=disable" \
+            --from-literal=DATABASE_URL="postgresql://postgres:${POSTGRES_PWD}@comp-postgres:5432/comp?schema=public" \
             --from-literal=AUTH_SECRET="${AUTH_SEC}" \
             --from-literal=BETTER_AUTH_SECRET="${AUTH_SEC}" \
             --from-literal=SECRET_KEY="${SEC_KEY}" \

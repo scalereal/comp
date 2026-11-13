@@ -21,7 +21,6 @@ export function resolveSslConfig(
   databaseUrl: string,
   env: Partial<NodeJS.ProcessEnv> = process.env,
 ): SslConfig {
-  if (databaseUrl.includes('sslmode=disable') || databaseUrl.includes('ssl=false')) return undefined;
   if (isLocalhostUrl(databaseUrl)) return undefined;
   if (env.PRISMA_ALLOW_INSECURE_TLS === '1') return { rejectUnauthorized: false };
   // Verified TLS via Node's default trust store, which includes Amazon Root
