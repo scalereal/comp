@@ -9,6 +9,8 @@ metadata:
 data:
   NODE_ENV: "production"
   BASE_DOMAIN: "${BASE_DOMAIN}"
+  COOKIE_DOMAIN: ".${BASE_DOMAIN}"
+  AUTH_TRUSTED_ORIGINS: "https://${APP_HOST},https://${PORTAL_HOST},https://${API_HOST},http://localhost:3000,http://localhost:3333"
   # Public URLs for subdomains
   BASE_URL: "https://${API_HOST}"
   PORTAL_URL: "https://${PORTAL_HOST}"

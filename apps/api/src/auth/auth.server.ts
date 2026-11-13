@@ -50,6 +50,9 @@ const MAGIC_LINK_EXPIRES_IN_SECONDS = 60 * 60; // 1 hour
  * Determine the cookie domain based on environment.
  */
 function getCookieDomain(): string | undefined {
+  if (process.env.COOKIE_DOMAIN) {
+    return process.env.COOKIE_DOMAIN;
+  }
   const baseUrl = process.env.BASE_URL || '';
 
   if (baseUrl.includes('staging.trycomp.ai')) {
@@ -58,6 +61,13 @@ function getCookieDomain(): string | undefined {
   if (baseUrl.includes('trycomp.ai')) {
     return '.trycomp.ai';
   }
+  try {
+    const url = new URL(baseUrl);
+    const parts = url.hostname.split('.');
+    if (parts.length > 2) {
+      return '.' + parts.slice(1).join('.');
+    }
+  } catch {}
   return undefined;
 }
 
