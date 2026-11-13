@@ -1,0 +1,53 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: comp-ingress
+  namespace: comp
+  labels:
+    app.kubernetes.io/name: comp-ingress
+    app.kubernetes.io/part-of: comp-ai
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt"
+spec:
+  ingressClassName: cilium
+  tls:
+    - hosts:
+        - ${APP_HOST}
+      secretName: comp-app-tls
+    - hosts:
+        - ${API_HOST}
+      secretName: comp-api-tls
+    - hosts:
+        - ${PORTAL_HOST}
+      secretName: comp-portal-tls
+  rules:
+    - host: ${APP_HOST}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: comp-app
+                port:
+                  number: 3000
+    - host: ${API_HOST}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: comp-api
+                port:
+                  number: 3333
+    - host: ${PORTAL_HOST}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: comp-portal
+                port:
+                  number: 3000

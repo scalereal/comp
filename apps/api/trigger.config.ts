@@ -6,7 +6,7 @@ import { integrationPlatformExtension } from './integrationPlatformExtension';
 
 export default defineConfig({
   runtime: 'node-22',
-  project: 'proj_zlummtuulgslfizxrwmk', // API project
+  project: process.env.TRIGGER_PROJECT_ID || 'comp',
   logLevel: 'log',
   maxDuration: 300, // 5 minutes
   build: {

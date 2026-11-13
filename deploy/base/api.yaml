@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: comp-api
+  namespace: comp
+  labels:
+    app.kubernetes.io/name: comp-api
+    app.kubernetes.io/part-of: comp-ai
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: comp-api
+  template:
+    metadata:
+      labels:
+        app: comp-api
+    spec:
+      imagePullSecrets:
+        - name: ghcr-secret
+      containers:
+        - name: api
+          image: comp-api:latest
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: comp-config
+            - secretRef:
+                name: comp-secrets
+          ports:
+            - containerPort: 3333
+              name: http
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 800m
+              memory: 768Mi
+          livenessProbe:
+            httpGet:
+              path: /v1/health
+              port: 3333
+            initialDelaySeconds: 20
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /v1/health
+              port: 3333
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: comp-api
+  namespace: comp
+  labels:
+    app.kubernetes.io/name: comp-api
+    app.kubernetes.io/part-of: comp-ai
+spec:
+  type: ClusterIP
+  selector:
+    app: comp-api
+  ports:
+    - port: 3333
+      targetPort: 3333
+      name: http

@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: comp-postgres-pvc
+  namespace: comp
+  labels:
+    app.kubernetes.io/name: comp-postgres
+    app.kubernetes.io/part-of: comp-ai
+spec:
+  storageClassName: openebs-hostpath
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: comp-redis-pvc
+  namespace: comp
+  labels:
+    app.kubernetes.io/name: comp-redis
+    app.kubernetes.io/part-of: comp-ai
+spec:
+  storageClassName: openebs-hostpath
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: comp-minio-pvc
+  namespace: comp
+  labels:
+    app.kubernetes.io/name: comp-minio
+    app.kubernetes.io/part-of: comp-ai
+spec:
+  storageClassName: openebs-hostpath
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi

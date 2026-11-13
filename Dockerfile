@@ -135,7 +135,8 @@ WORKDIR /app
 
 COPY apps/portal ./apps/portal
 
-# The database package build already produced the combined schema.
+# Copy schema models and combined schema for portal
+RUN cd apps/portal && bun run db:getschema
 RUN cp packages/db/dist/schema.prisma apps/portal/prisma/schema.prisma
 
 # Ensure Next build has required public env at build-time

@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: comp-trigger-worker
+  namespace: comp
+  labels:
+    app.kubernetes.io/name: comp-trigger-worker
+    app.kubernetes.io/part-of: comp-ai
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: comp-trigger-worker
+  template:
+    metadata:
+      labels:
+        app: comp-trigger-worker
+    spec:
+      imagePullSecrets:
+        - name: ghcr-secret
+      containers:
+        - name: worker
+          image: comp-trigger-worker:latest
+          imagePullPolicy: IfNotPresent
+          workingDir: /app/apps/api
+          command:
+            - sh
+            - -c
+            - |
+              mkdir -p /root/.config/trigger
+              cat << 'EOF' > /root/.config/trigger/config.json
+              {
+                "version": 2,
+                "currentProfile": "default",
+                "profiles": {
+                  "default": {
+                    "accessToken": "${TRIGGER_ACCESS_TOKEN}",
+                    "apiUrl": "https://api.trigger.dev"
+                  }
+                },
+                "settings": {
+                  "hasSeenMCPInstallPrompt": true,
+                  "hasSeenRulesInstallPrompt": true
+                }
+              }
+              EOF
+              exec bun run dev:trigger -- --skip-update-check --skip-telemetry
+          envFrom:
+            - configMapRef:
+                name: comp-config
+            - secretRef:
+                name: comp-secrets
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1536Mi

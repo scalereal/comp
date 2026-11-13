@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: comp-config
+  namespace: comp
+  labels:
+    app.kubernetes.io/name: comp-config
+    app.kubernetes.io/part-of: comp-ai
+data:
+  NODE_ENV: "production"
+  BASE_DOMAIN: "${BASE_DOMAIN}"
+  # Public URLs for subdomains
+  BASE_URL: "https://${API_HOST}"
+  PORTAL_URL: "https://${PORTAL_HOST}"
+  TRUST_APP_URL: "https://${PORTAL_HOST}"
+  BETTER_AUTH_URL: "https://${APP_HOST}"
+  NEXT_PUBLIC_BETTER_AUTH_URL: "https://${APP_HOST}"
+  NEXT_PUBLIC_APP_URL: "https://${APP_HOST}"
+  NEXT_PUBLIC_PORTAL_URL: "https://${PORTAL_HOST}"
+  NEXT_PUBLIC_API_URL: "https://${API_HOST}"
+  NEXT_PUBLIC_SELF_HOSTED: "true"
+  # Internal Cluster DNS Routing
+  BACKEND_API_URL: "http://comp-api:3333"
+  UPSTASH_REDIS_REST_URL: "http://comp-redis-http:80"
+  REDIS_URL: "redis://comp-redis:6379"
+  APP_AWS_ENDPOINT: "http://comp-minio:9000"
+  APP_AWS_REGION: "us-east-1"
+  APP_AWS_BUCKET_NAME: "comp-attachments"
+  APP_AWS_ORG_ASSETS_BUCKET: "comp-assets"
+  APP_AWS_QUESTIONNAIRE_UPLOAD_BUCKET: "comp-questionnaire-uploads"
+  APP_AWS_KNOWLEDGE_BASE_BUCKET: "comp-knowledge-base"
+  # Senders & Project
+  TRIGGER_PROJECT_ID: "${TRIGGER_PROJECT_ID}"
+  RESEND_FROM_DEFAULT: "${RESEND_FROM_DEFAULT}"
+  RESEND_FROM_SYSTEM: "${RESEND_FROM_SYSTEM}"
+  RESEND_FROM_TRUST_PORTAL: "${RESEND_FROM_TRUST_PORTAL}"

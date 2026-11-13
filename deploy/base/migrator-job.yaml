@@ -1,0 +1,32 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: comp-migrator
+  namespace: comp
+  labels:
+    app.kubernetes.io/name: comp-migrator
+    app.kubernetes.io/part-of: comp-ai
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: comp-migrator
+    spec:
+      restartPolicy: OnFailure
+      imagePullSecrets:
+        - name: ghcr-secret
+      containers:
+        - name: migrator
+          image: comp-migrator:latest
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - secretRef:
+                name: comp-secrets
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi

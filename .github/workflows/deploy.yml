@@ -1,0 +1,276 @@
+name: Deploy to Kubernetes
+
+on:
+  push:
+    branches:
+      - main
+      - fix/docker-builds
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: comp
+
+jobs:
+  build-and-push:
+    name: Build & Push (${{ matrix.component.name }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        component:
+          - name: migrator
+            context: .
+            dockerfile: ./Dockerfile
+            target: migrator
+            is_nextjs: false
+          - name: api
+            context: .
+            dockerfile: ./apps/api/Dockerfile.multistage
+            target: api
+            is_nextjs: false
+          - name: trigger-worker
+            context: .
+            dockerfile: ./apps/api/Dockerfile.multistage
+            target: trigger-worker
+            is_nextjs: false
+          - name: app
+            context: .
+            dockerfile: ./Dockerfile
+            target: app
+            is_nextjs: true
+          - name: portal
+            context: .
+            dockerfile: ./Dockerfile
+            target: portal
+            is_nextjs: true
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Load centralized configurations
+        id: config
+        run: |
+          set -a
+          [ -f deploy/values.env ] && . deploy/values.env
+          set +a
+          
+          # Allow GitHub repository variable override if defined
+          if [ -n "${{ vars.BASE_DOMAIN }}" ]; then
+            BASE_DOMAIN="${{ vars.BASE_DOMAIN }}"
+            APP_HOST="app.${BASE_DOMAIN}"
+            API_HOST="api.${BASE_DOMAIN}"
+            PORTAL_HOST="portal.${BASE_DOMAIN}"
+          fi
+          
+          REPO_OWNER="${GITHUB_REPOSITORY_OWNER,,}"
+          IMAGE_NAME="${{ env.REGISTRY }}/${REPO_OWNER}/${{ env.IMAGE_PREFIX }}-${{ matrix.component.name }}"
+          
+          echo "repo_owner=${REPO_OWNER}" >> $GITHUB_OUTPUT
+          echo "image_name=${IMAGE_NAME}" >> $GITHUB_OUTPUT
+          echo "app_host=${APP_HOST}" >> $GITHUB_OUTPUT
+          echo "api_host=${API_HOST}" >> $GITHUB_OUTPUT
+          echo "portal_host=${PORTAL_HOST}" >> $GITHUB_OUTPUT
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prepare build-time secrets mount for Next.js
+        if: ${{ matrix.component.is_nextjs }}
+        run: |
+          mkdir -p /tmp/build-env
+          cat << EOF > /tmp/build-env/${{ matrix.component.name }}.env
+          DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/comp"
+          NODE_ENV="production"
+          AUTH_SECRET="build_dummy_auth_secret_placeholder"
+          SECRET_KEY="build_dummy_secret_key_placeholder"
+          REVALIDATION_SECRET="build_dummy_revalidation_secret_placeholder"
+          UNSUBSCRIBE_SECRET="build_dummy_unsubscribe_secret_placeholder"
+          INTERNAL_API_TOKEN="build_dummy_internal_api_token_placeholder"
+          SERVICE_TOKEN_TRIGGER="build_dummy_service_token_trigger_placeholder"
+          BETTER_AUTH_URL="https://${{ steps.config.outputs.app_host }}"
+          NEXT_PUBLIC_BETTER_AUTH_URL="https://${{ steps.config.outputs.app_host }}"
+          NEXT_PUBLIC_PORTAL_URL="https://${{ steps.config.outputs.portal_host }}"
+          NEXT_PUBLIC_API_URL="https://${{ steps.config.outputs.api_host }}"
+          BACKEND_API_URL="http://comp-api:3333"
+          NEXT_PUBLIC_SELF_HOSTED="true"
+          EOF
+
+      - name: Build & Push Container Image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.component.context }}
+          file: ${{ matrix.component.dockerfile }}
+          target: ${{ matrix.component.target }}
+          push: true
+          build-args: |
+            NEXT_PUBLIC_BETTER_AUTH_URL=https://${{ steps.config.outputs.app_host }}
+            NEXT_PUBLIC_API_URL=https://${{ steps.config.outputs.api_host }}
+          secrets: |
+            "${{ matrix.component.name }}_build_env=/tmp/build-env/${{ matrix.component.name }}.env"
+          tags: |
+            ${{ steps.config.outputs.image_name }}:${{ github.sha }}
+            ${{ steps.config.outputs.image_name }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to Kubernetes Cluster
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Set up Kustomize
+        uses: imranismail/setup-kustomize@v2
+
+      - name: Configure Kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG }}" > ~/.kube/config
+          chmod 600 ~/.kube/config
+          kubectl cluster-info
+
+      - name: Ensure Namespace & Image Pull Secret
+        run: |
+          kubectl apply -f deploy/base/namespace.yaml
+          kubectl create secret docker-registry ghcr-secret \
+            --namespace=comp \
+            --docker-server=${{ env.REGISTRY }} \
+            --docker-username="${{ github.actor }}" \
+            --docker-password="${{ secrets.GITHUB_TOKEN }}" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Populate Application Secrets
+        env:
+          POSTGRES_PWD: ${{ secrets.POSTGRES_PASSWORD }}
+          MINIO_PWD: ${{ secrets.MINIO_ROOT_PASSWORD }}
+          REDIS_PWD: ${{ secrets.REDIS_PASSWORD }}
+          AUTH_SEC: ${{ secrets.AUTH_SECRET }}
+          SEC_KEY: ${{ secrets.SECRET_KEY }}
+          REVAL_SEC: ${{ secrets.REVALIDATION_SECRET }}
+          UNSUB_SEC: ${{ secrets.UNSUBSCRIBE_SECRET }}
+          INTERNAL_TOK: ${{ secrets.INTERNAL_API_TOKEN }}
+          TRIG_TOK: ${{ secrets.SERVICE_TOKEN_TRIGGER }}
+          PORTAL_TOK: ${{ secrets.SERVICE_TOKEN_PORTAL }}
+          MACED_KEY: ${{ secrets.MACED_API_KEY }}
+          TRIG_SEC_KEY: ${{ secrets.TRIGGER_SECRET_KEY }}
+          TRIG_ACC_TOK: ${{ secrets.TRIGGER_ACCESS_TOKEN }}
+          RESEND_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: |
+          kubectl create secret generic comp-secrets \
+            --namespace=comp \
+            --from-literal=POSTGRES_USER="postgres" \
+            --from-literal=POSTGRES_PASSWORD="${POSTGRES_PWD}" \
+            --from-literal=POSTGRES_DB="comp" \
+            --from-literal=DATABASE_URL="postgresql://postgres:${POSTGRES_PWD}@comp-postgres:5432/comp?schema=public&sslmode=disable" \
+            --from-literal=AUTH_SECRET="${AUTH_SEC}" \
+            --from-literal=BETTER_AUTH_SECRET="${AUTH_SEC}" \
+            --from-literal=SECRET_KEY="${SEC_KEY}" \
+            --from-literal=REVALIDATION_SECRET="${REVAL_SEC}" \
+            --from-literal=UNSUBSCRIBE_SECRET="${UNSUB_SEC}" \
+            --from-literal=INTERNAL_API_TOKEN="${INTERNAL_TOK}" \
+            --from-literal=SERVICE_TOKEN_TRIGGER="${TRIG_TOK}" \
+            --from-literal=SERVICE_TOKEN_PORTAL="${PORTAL_TOK}" \
+            --from-literal=MACED_API_KEY="${MACED_KEY}" \
+            --from-literal=REDIS_PASSWORD="${REDIS_PWD}" \
+            --from-literal=SRH_TOKEN="${REDIS_PWD}" \
+            --from-literal=UPSTASH_REDIS_REST_TOKEN="${REDIS_PWD}" \
+            --from-literal=MINIO_ROOT_USER="minioadmin" \
+            --from-literal=MINIO_ROOT_PASSWORD="${MINIO_PWD}" \
+            --from-literal=APP_AWS_ACCESS_KEY_ID="minioadmin" \
+            --from-literal=APP_AWS_SECRET_ACCESS_KEY="${MINIO_PWD}" \
+            --from-literal=TRIGGER_SECRET_KEY="${TRIG_SEC_KEY}" \
+            --from-literal=TRIGGER_ACCESS_TOKEN="${TRIG_ACC_TOK}" \
+            --from-literal=TRIGGER_APP_SECRET_KEY="${TRIG_SEC_KEY}" \
+            --from-literal=RESEND_API_KEY="${RESEND_KEY}" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Render Central Configurations & Ingress
+        run: |
+          set -a
+          [ -f deploy/values.env ] && . deploy/values.env
+          set +a
+
+          if [ -n "${{ vars.BASE_DOMAIN }}" ]; then
+            BASE_DOMAIN="${{ vars.BASE_DOMAIN }}"
+            APP_HOST="app.${BASE_DOMAIN}"
+            API_HOST="api.${BASE_DOMAIN}"
+            PORTAL_HOST="portal.${BASE_DOMAIN}"
+          fi
+          export BASE_DOMAIN APP_HOST API_HOST PORTAL_HOST
+          
+          if [ -n "${{ vars.TRIGGER_PROJECT_ID }}" ]; then
+            export TRIGGER_PROJECT_ID="${{ vars.TRIGGER_PROJECT_ID }}"
+          fi
+
+          envsubst < deploy/base/configmap.yaml > /tmp/configmap.yaml && mv /tmp/configmap.yaml deploy/base/configmap.yaml
+          envsubst < deploy/base/ingress.yaml > /tmp/ingress.yaml && mv /tmp/ingress.yaml deploy/base/ingress.yaml
+
+      - name: Deploy Core Infrastructure & Config
+        run: |
+          kubectl apply -f deploy/base/pvcs.yaml
+          kubectl apply -f deploy/base/configmap.yaml
+          kubectl apply -f deploy/base/infra.yaml
+          echo "Waiting for PostgreSQL to be ready..."
+          kubectl rollout status deployment/comp-postgres -n comp --timeout=180s
+
+      - name: Run Database Migrations Job
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+          IMAGE_PREFIX: ${{ env.IMAGE_PREFIX }}
+          REGISTRY: ${{ env.REGISTRY }}
+        run: |
+          REPO_OWNER="${GITHUB_REPOSITORY_OWNER,,}"
+          IMAGE_NAME="${REGISTRY}/${REPO_OWNER}/${IMAGE_PREFIX}-migrator:${IMAGE_TAG}"
+
+          echo "Cleaning up prior migrator job if exists..."
+          kubectl delete job comp-migrator -n comp --ignore-not-found
+
+          echo "Applying migrator job with image ${IMAGE_NAME}..."
+          sed "s|image: comp-migrator:latest|image: ${IMAGE_NAME}|g" deploy/base/migrator-job.yaml | kubectl apply -f -
+
+          echo "Waiting for database migrations to finish..."
+          kubectl wait --for=condition=complete job/comp-migrator -n comp --timeout=180s
+
+      - name: Deploy Applications with Kustomize
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+          IMAGE_PREFIX: ${{ env.IMAGE_PREFIX }}
+          REGISTRY: ${{ env.REGISTRY }}
+        run: |
+          REPO_OWNER="${GITHUB_REPOSITORY_OWNER,,}"
+          cd deploy/overlays/production
+          
+          for COMPONENT in api app portal trigger-worker migrator; do
+            IMAGE_REF="${REGISTRY}/${REPO_OWNER}/${IMAGE_PREFIX}-${COMPONENT}:${IMAGE_TAG}"
+            kustomize edit set image ${IMAGE_PREFIX}-${COMPONENT}=${IMAGE_REF}
+          done
+
+          kubectl apply -k .
+
+      - name: Verify Rollout Status
+        run: |
+          kubectl rollout status deployment/comp-api -n comp --timeout=240s
+          kubectl rollout status deployment/comp-app -n comp --timeout=240s
+          kubectl rollout status deployment/comp-portal -n comp --timeout=240s
+          kubectl rollout status deployment/comp-trigger-worker -n comp --timeout=240s
+          echo "✅ All Comp AI deployments successfully rolled out to Kubernetes!"
