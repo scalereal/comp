@@ -75,7 +75,7 @@ To ensure Comp AI runs reliably while strictly preventing any pod from starving 
 | **comp-api** | 100m | 800m | 256Mi | 768Mi | N/A |
 | **comp-app** | 100m | 800m | 256Mi | 768Mi | N/A |
 | **comp-portal** | 100m | 500m | 128Mi | 512Mi | N/A |
-| **comp-trigger-worker**| 100m | 1000m (1 core) | 512Mi | 1536Mi (1.5Gi) | N/A |
+| **comp-trigger-worker**| 100m | 2000m (2 cores)| 512Mi | 3072Mi (3Gi)   | N/A |
 | **comp-migrator** (Job)| 50m | 500m | 128Mi | 512Mi | N/A |
 | **TOTAL PEAK LIMIT** | **~575m** | **~5.5 cores** | **~1.6 GiB** | **~5.5 GiB** | **42 GiB Total** |
 
