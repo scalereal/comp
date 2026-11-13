@@ -1,24 +1,25 @@
 name: Create Feature Branch -> Main Pull Request
 on:
-  push:
-    branches:
-      - feature/*
-      - feat/*
-      - chore/*
-      - patch/*
-      - fix/*
-      - bug/*
-      - task/*
-      - story/*
-      - claudio/*
-      - mariano/*
-      - lewis/*
-      - daniel/*
-      - COMP-*
-      - cursor/*
-      - codex/*
-      - chas/*
-      - tofik/*
+  workflow_dispatch:
+  # push:
+  #   branches:
+  #     - feature/*
+  #     - feat/*
+  #     - chore/*
+  #     - patch/*
+  #     - fix/*
+  #     - bug/*
+  #     - task/*
+  #     - story/*
+  #     - claudio/*
+  #     - mariano/*
+  #     - lewis/*
+  #     - daniel/*
+  #     - COMP-*
+  #     - cursor/*
+  #     - codex/*
+  #     - chas/*
+  #     - tofik/*
 jobs:
   create-pull-request:
     runs-on: warp-ubuntu-latest-arm64-4x

@@ -32,17 +32,11 @@ services:
         - app_build_env
       args:
         NEXT_PUBLIC_BETTER_AUTH_URL: ${BETTER_AUTH_URL}
-    ports:
-      - '3000:3000'
+    network_mode: host
     env_file:
       - apps/app/.env
     restart: unless-stopped
-    healthcheck:
-      test: ['CMD-SHELL', 'curl -f http://localhost:3000/api/health || exit 1']
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    command: sh -lc "node apps/app/server.js"
+    command: sh -lc "HOSTNAME=0.0.0.0 PORT=3000 node apps/app/server.js"
     logging: *default-logging
   portal:
     build:
@@ -53,19 +47,28 @@ services:
         - portal_build_env
       args:
         NEXT_PUBLIC_BETTER_AUTH_URL: ${BETTER_AUTH_URL}
-    ports:
-      - '3002:3000'
+    network_mode: host
     env_file:
       - apps/portal/.env
     restart: unless-stopped
-    healthcheck:
-      test: ['CMD-SHELL', 'curl -f http://localhost:3000/ || exit 1']
-      interval: 30s
-      timeout: 10s
-      retries: 3
+    command: sh -lc "HOSTNAME=0.0.0.0 PORT=3002 node apps/portal/server.js"
     logging: *default-logging
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+
+  trigger-worker:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile.multistage
+      target: builder
+    container_name: comp-trigger-worker
+    network_mode: host
+    working_dir: /app/apps/api
+    command: bun run dev:trigger -- --skip-update-check --skip-telemetry
+    volumes:
+      - ./packages/db/certs:/app/packages/db/certs
+    env_file:
+      - apps/api/.env
+    restart: unless-stopped
+    logging: *default-logging
 
 # Available only to the corresponding Docker build RUN secret mount.
 secrets:

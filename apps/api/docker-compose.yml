@@ -8,8 +8,7 @@ services:
       dockerfile: apps/api/Dockerfile.multistage
       target: production
     container_name: comp-api-test
-    ports:
-      - "3333:3333"
+    network_mode: host
     environment:
       - NODE_ENV=production
       - PORT=3333
@@ -23,6 +22,21 @@ services:
       retries: 3
       start_period: 5s
     
+    restart: unless-stopped
+
+  trigger-worker:
+    build:
+      context: ../..
+      dockerfile: apps/api/Dockerfile.multistage
+      target: builder
+    container_name: comp-trigger-worker
+    network_mode: host
+    working_dir: /app/apps/api
+    command: bun run dev:trigger -- --skip-update-check --skip-telemetry
+    volumes:
+      - ../../packages/db/certs:/app/packages/db/certs
+    env_file:
+      - .env
     restart: unless-stopped
 
 

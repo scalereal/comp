@@ -34,12 +34,12 @@ jobs:
           - name: api
             context: .
             dockerfile: ./apps/api/Dockerfile.multistage
-            target: api
+            target: production
             is_nextjs: false
           - name: trigger-worker
             context: .
             dockerfile: ./apps/api/Dockerfile.multistage
-            target: trigger-worker
+            target: builder
             is_nextjs: false
           - name: app
             context: .
@@ -145,7 +145,16 @@ jobs:
       - name: Configure Kubeconfig
         run: |
           mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG }}" > ~/.kube/config
+          RAW_CONFIG='${{ secrets.KUBECONFIG }}'
+          if echo "${RAW_CONFIG}" | base64 -d 2>/dev/null | grep -q "apiVersion:"; then
+            echo "${RAW_CONFIG}" | base64 -d > ~/.kube/config
+          else
+            echo "${RAW_CONFIG}" > ~/.kube/config
+          fi
+          # Ensure public IPv4 endpoint is used if internal IPv6 or loopback was in kubeconfig
+          sed -i -E 's|https://(\[[0-9a-fA-F:]+\]|2a01:4f8:[0-9a-fA-F:]+):6443|https://157.90.177.157:6443|g' ~/.kube/config
+          sed -i 's|https://127.0.0.1:6443|https://157.90.177.157:6443|g' ~/.kube/config
+          sed -i 's|https://localhost:6443|https://157.90.177.157:6443|g' ~/.kube/config
           chmod 600 ~/.kube/config
           kubectl cluster-info
 
