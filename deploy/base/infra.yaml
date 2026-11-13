@@ -185,8 +185,10 @@ spec:
           env:
             - name: SRH_MODE
               value: "env"
-            - name: SRH_REDIS_URL
+            - name: SRH_CONNECTION_STRING
               value: "redis://comp-redis:6379"
+            - name: SRH_PORT
+              value: "80"
             - name: SRH_TOKEN
               valueFrom:
                 secretKeyRef:
@@ -197,11 +199,11 @@ spec:
               name: http
           resources:
             requests:
-              cpu: 25m
-              memory: 32Mi
+              cpu: 50m
+              memory: 64Mi
             limits:
-              cpu: 150m
-              memory: 128Mi
+              cpu: 500m
+              memory: 512Mi
           livenessProbe:
             httpGet:
               path: /
