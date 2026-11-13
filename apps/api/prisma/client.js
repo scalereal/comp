@@ -4,7 +4,7 @@ exports.db = void 0;
 const client_1 = require("@prisma/client");
 const adapter_pg_1 = require("@prisma/adapter-pg");
 const globalForPrisma = global;
-const LOCAL_HOSTNAMES = new Set(['localhost', '127.0.0.1', '::1']);
+const LOCAL_HOSTNAMES = new Set(['localhost', '127.0.0.1', '::1', 'comp-postgres']);
 function stripSslMode(connectionString) {
     const url = new URL(connectionString);
     url.searchParams.delete('sslmode');
