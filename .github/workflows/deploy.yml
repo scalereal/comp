@@ -151,11 +151,9 @@ jobs:
           else
             echo "${RAW_CONFIG}" > ~/.kube/config
           fi
-          # Ensure public IPv4 endpoint is used if internal IPv6 or loopback was in kubeconfig
-          sed -i -E 's|https://(\[[0-9a-fA-F:]+\]|2a01:4f8:[0-9a-fA-F:]+):6443|https://157.90.177.157:6443|g' ~/.kube/config
-          sed -i 's|https://127.0.0.1:6443|https://157.90.177.157:6443|g' ~/.kube/config
-          sed -i 's|https://localhost:6443|https://157.90.177.157:6443|g' ~/.kube/config
           chmod 600 ~/.kube/config
+          CLUSTER_NAME="$(kubectl config view -o jsonpath='{.clusters[0].name}')"
+          kubectl config set-cluster "${CLUSTER_NAME}" --server=https://157.90.177.157:6443
           kubectl cluster-info
 
       - name: Ensure Namespace & Image Pull Secret
