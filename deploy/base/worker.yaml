@@ -49,7 +49,7 @@ spec:
               exec bun run dev:trigger -- --skip-update-check --skip-telemetry
           env:
             - name: NODE_OPTIONS
-              value: "--max-old-space-size=2560"
+              value: "--max-old-space-size=3584"
           envFrom:
             - configMapRef:
                 name: comp-config
@@ -61,4 +61,4 @@ spec:
               memory: 512Mi
             limits:
               cpu: "2"
-              memory: 3072Mi
+              memory: 4096Mi
