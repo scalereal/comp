@@ -273,6 +273,8 @@ jobs:
           done
 
           kubectl apply -k .
+          echo "Triggering rolling restart to ensure any secret/config changes are picked up..."
+          kubectl rollout restart deployment/comp-api deployment/comp-app deployment/comp-portal deployment/comp-trigger-worker -n comp
 
       - name: Verify Rollout Status
         run: |
