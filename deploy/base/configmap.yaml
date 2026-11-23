@@ -28,6 +28,7 @@ data:
   APP_AWS_ENDPOINT: "http://comp-minio:9000"
   APP_AWS_REGION: "us-east-1"
   APP_AWS_BUCKET_NAME: "comp-attachments"
+  FLEET_AGENT_BUCKET_NAME: "${FLEET_AGENT_BUCKET_NAME}"
   APP_AWS_ORG_ASSETS_BUCKET: "comp-assets"
   APP_AWS_QUESTIONNAIRE_UPLOAD_BUCKET: "comp-questionnaire-uploads"
   APP_AWS_KNOWLEDGE_BASE_BUCKET: "comp-knowledge-base"
