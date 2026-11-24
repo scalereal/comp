@@ -85,6 +85,8 @@ module.exports = {
   },
   publish: {
     provider: 'generic',
-    url: process.env.AUTO_UPDATE_URL || 'https://portal.trycomp.ai/api/device-agent/updates',
+    url:
+      process.env.AUTO_UPDATE_URL ||
+      'https://portal.comp.scalereal.tech/api/device-agent/updates',
   },
 };

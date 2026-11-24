@@ -12,10 +12,14 @@ export default defineConfig({
     plugins: [externalizeDepsPlugin({ exclude: ['electron-store'] })],
     define: {
       __PORTAL_URL__: JSON.stringify(
-        process.env.PORTAL_URL || 'https://portal.trycomp.ai',
+        process.env.PORTAL_URL || 'https://portal.comp.scalereal.tech',
       ),
       __API_URL__: JSON.stringify(
-        process.env.API_URL || 'https://api.trycomp.ai',
+        process.env.API_URL || 'https://api.comp.scalereal.tech',
+      ),
+      __AUTO_UPDATE_URL__: JSON.stringify(
+        process.env.AUTO_UPDATE_URL ||
+          'https://portal.comp.scalereal.tech/api/device-agent/updates',
       ),
       __AGENT_VERSION__: JSON.stringify(
         process.env.AGENT_VERSION || pkg.version,

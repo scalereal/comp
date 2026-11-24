@@ -21,20 +21,7 @@ const config = {
     ],
   },
   async rewrites() {
-    return [
-      {
-        source: '/ingest/static/:path*',
-        destination: 'https://us-assets.i.posthog.com/static/:path*',
-      },
-      {
-        source: '/ingest/:path*',
-        destination: 'https://us.i.posthog.com/:path*',
-      },
-      {
-        source: '/ingest/decide',
-        destination: 'https://us.i.posthog.com/decide',
-      },
-    ];
+    return [];
   },
   async headers() {
     return [
@@ -73,11 +60,8 @@ const config = {
 };
 
 export default withSentryConfig(config, {
-  org: 'comp-ai',
-  project: 'comp',
-
   // Only print logs for uploading source maps in CI
-  silent: !process.env.CI,
+  silent: true,
 
   // Upload a larger set of source maps for prettier stack traces
   widenClientFileUpload: true,

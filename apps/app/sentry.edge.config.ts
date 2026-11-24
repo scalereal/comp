@@ -6,16 +6,13 @@
 import * as Sentry from '@sentry/nextjs';
 
 Sentry.init({
-  dsn:
-    process.env.SENTRY_DSN ??
-    'https://331f1c3d4b08e9352dd1a2621e1ae845@o4509214247813120.ingest.us.sentry.io/4511304630927360',
+  dsn: process.env.SENTRY_DSN || '',
 
-  // Only report from production. On Vercel, VERCEL_ENV is 'production' | 'preview'
-  // | 'development'; on any non-production deployment (or if the var is missing)
-  // Sentry stays disabled — a no-op, never an error — to avoid noise and quota burn.
-  enabled: process.env.VERCEL_ENV === 'production',
+  // Sentry is disabled by default in self-hosted mode unless an explicit SENTRY_DSN is configured.
+  // Never falls back to upstream Sentry cloud.
+  enabled: Boolean(process.env.SENTRY_DSN),
 
   tracesSampleRate: process.env.NODE_ENV === 'development' ? 1.0 : 0.1,
 
-  enableLogs: true,
+  enableLogs: Boolean(process.env.SENTRY_DSN),
 });

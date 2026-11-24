@@ -17,7 +17,9 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://app.trycomp.ai'),
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_APP_URL || 'https://app.comp.scalereal.tech',
+  ),
   title: 'Comp AI | Automate SOC 2, ISO 27001 and GDPR compliance with AI.',
   description: 'Automate SOC 2, ISO 27001 and GDPR compliance with AI.',
   twitter: {
@@ -25,32 +27,22 @@ export const metadata: Metadata = {
     description: 'Automate SOC 2, ISO 27001 and GDPR compliance with AI.',
     images: [
       {
-        url: 'https://cdn.trycomp.ai/opengraph-image.jpg',
-        width: 800,
-        height: 600,
-      },
-      {
-        url: 'https://cdn.trycomp.ai/opengraph-image.jpg',
-        width: 1800,
-        height: 1600,
+        url: '/apple-touch-icon.png',
+        width: 180,
+        height: 180,
       },
     ],
   },
   openGraph: {
     title: 'Comp AI | Automate SOC 2, ISO 27001 and GDPR compliance with AI.',
     description: 'Automate SOC 2, ISO 27001 and GDPR compliance with AI.',
-    url: 'https://app.trycomp.ai',
+    url: process.env.NEXT_PUBLIC_APP_URL || 'https://app.comp.scalereal.tech',
     siteName: 'Comp AI',
     images: [
       {
-        url: 'https://cdn.trycomp.ai/opengraph-image.jpg',
-        width: 800,
-        height: 600,
-      },
-      {
-        url: 'https://cdn.trycomp.ai/opengraph-image.jpg',
-        width: 1800,
-        height: 1600,
+        url: '/apple-touch-icon.png',
+        width: 180,
+        height: 180,
       },
     ],
     locale: 'en_US',

@@ -14,7 +14,9 @@ import { Toaster } from 'sonner';
 import { Providers } from './providers';
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://portal.trycomp.ai'),
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_PORTAL_URL || 'https://portal.comp.scalereal.tech',
+  ),
   title: 'Comp AI | Employee Portal',
   description: 'Enter your email and one time password to continue',
   twitter: {
@@ -22,32 +24,23 @@ export const metadata: Metadata = {
     description: 'Enter your email and one time password to continue',
     images: [
       {
-        url: 'https://cdn.trycomp.ai/opengraph-image.jpg',
-        width: 800,
-        height: 600,
-      },
-      {
-        url: 'https://cdn.trycomp.ai/opengraph-image.jpg',
-        width: 1800,
-        height: 1600,
+        url: '/logo.png',
+        width: 180,
+        height: 180,
       },
     ],
   },
   openGraph: {
     title: 'Comp AI | Employee Portal',
     description: 'Enter your email and one time password to continue',
-    url: 'https://portal.trycomp.ai',
+    url:
+      process.env.NEXT_PUBLIC_PORTAL_URL || 'https://portal.comp.scalereal.tech',
     siteName: 'Comp AI',
     images: [
       {
-        url: 'https://cdn.trycomp.ai/opengraph-image.jpg',
-        width: 800,
-        height: 600,
-      },
-      {
-        url: 'https://cdn.trycomp.ai/opengraph-image.jpg',
-        width: 1800,
-        height: 1600,
+        url: '/logo.png',
+        width: 180,
+        height: 180,
       },
     ],
     locale: 'en_US',
