@@ -275,11 +275,11 @@ spec:
               name: console
           resources:
             requests:
-              cpu: 50m
-              memory: 128Mi
+              cpu: 100m
+              memory: 256Mi
             limits:
-              cpu: 500m
-              memory: 512Mi
+              cpu: 1000m
+              memory: 2Gi
           livenessProbe:
             httpGet:
               path: /minio/health/live
