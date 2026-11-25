@@ -119,7 +119,7 @@ Important:
 `;
 
       const result = streamText({
-        model: openai('gpt-5'),
+        model: openai('gpt-6.1-terra'),
         system: systemPrompt,
         messages: await convertToModelMessages(messages),
         tools,

@@ -116,7 +116,8 @@ async function generateSectionContent(
   vendorsBlock: string,
 ): Promise<string> {
   const { text } = await generateText({
-    model: openai('gpt-5.5'),
+    model: openai('gpt-6.1-sol'),
+    providerOptions: { openai: { reasoningEffort: 'medium' } },
     system: AUDITOR_SYSTEM_PROMPT,
     prompt: buildSectionUserPrompt({
       section,
