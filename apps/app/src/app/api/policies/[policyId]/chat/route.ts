@@ -1,5 +1,5 @@
 import { auth } from '@/utils/auth';
-import { anthropic } from '@ai-sdk/anthropic';
+import { openai } from '@ai-sdk/openai';
 import { db } from '@db/server';
 import { convertToModelMessages, streamText, stepCountIs, type UIMessage } from 'ai';
 import { headers } from 'next/headers';
@@ -191,7 +191,8 @@ You MUST produce the policy by starting from the <current_policy> text above and
     })) as Array<UIMessage>;
 
     const result = streamText({
-      model: anthropic('claude-sonnet-4-6'),
+      model: openai('gpt-6.1-sol'),
+      providerOptions: { openai: { reasoningEffort: 'medium' } },
       system: systemPrompt,
       messages: await convertToModelMessages(cleanedMessages),
       toolChoice: 'auto',

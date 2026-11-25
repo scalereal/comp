@@ -1,5 +1,5 @@
 import { auth } from '@/utils/auth';
-import { anthropic } from '@ai-sdk/anthropic';
+import { openai } from '@ai-sdk/openai';
 import { generateText } from 'ai';
 import { headers } from 'next/headers';
 import { NextResponse } from 'next/server';
@@ -33,7 +33,8 @@ export async function POST(req: Request) {
     }
 
     const result = await generateText({
-      model: anthropic('claude-sonnet-4-6'),
+      model: openai('gpt-6.1-sol'),
+      providerOptions: { openai: { reasoningEffort: 'medium' } },
       // A single section is small; cap output so a runaway generation can't hang
       // the 30s request, and so we get a clean stop rather than a truncated edit.
       maxOutputTokens: 4000,
