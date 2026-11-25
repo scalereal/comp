@@ -184,6 +184,7 @@ jobs:
           RESEND_KEY: ${{ secrets.RESEND_API_KEY }}
           GOOGLE_ID: ${{ secrets.AUTH_GOOGLE_ID }}
           GOOGLE_SECRET: ${{ secrets.AUTH_GOOGLE_SECRET }}
+          OPENAI_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           kubectl create secret generic comp-secrets \
             --namespace=comp \
@@ -213,6 +214,7 @@ jobs:
             --from-literal=RESEND_API_KEY="${RESEND_KEY}" \
             --from-literal=AUTH_GOOGLE_ID="${GOOGLE_ID}" \
             --from-literal=AUTH_GOOGLE_SECRET="${GOOGLE_SECRET}" \
+            --from-literal=OPENAI_API_KEY="${OPENAI_KEY}" \
             --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Render Central Configurations & Ingress
