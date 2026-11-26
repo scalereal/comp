@@ -154,7 +154,7 @@ jobs:
           chmod 600 ~/.kube/config
           CLUSTER_NAME="$(kubectl config view -o jsonpath='{.clusters[0].name}')"
           kubectl config set-cluster "${CLUSTER_NAME}" --server=https://157.90.177.157:6443
-          kubectl cluster-info
+          kubectl get ns comp
 
       - name: Ensure Namespace & Image Pull Secret
         run: |
